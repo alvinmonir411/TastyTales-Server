@@ -33,6 +33,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const recipecollection = client.db("tastytales").collection("Allrecipe");
+    const parcelcollection = client.db("tastytales").collection("parcel");
     app.get("/allrecipe", async (req, res) => {
       const size = parseInt(req.query.size) || 10;
       const page = parseInt(req.query.page) || 1;
@@ -51,6 +52,34 @@ async function run() {
       const result = await recipecollection.find().toArray();
       res.send(result);
     });
+    // get all parcels
+    app.get("/parcels", async (req, res) => {
+      const email = req.query.email;
+
+      try {
+        let result;
+
+        if (email) {
+          // If email is provided, return parcels only for that email
+          result = await parcelcollection
+            .find({ sender_email: email })
+            .sort({ creation_date: -1 })
+            .toArray();
+        } else {
+          // If no email, return all parcels
+          result = await parcelcollection
+            .find()
+            .sort({ creation_date: -1 })
+            .toArray();
+        }
+
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching parcels:", error);
+        res.status(500).send({ error: "Internal Server Error" });
+      }
+    });
+    
     // get one recipe
     app.get("/recipedetails/:id", async (req, res) => {
       const id = req.params.id;
@@ -69,6 +98,12 @@ async function run() {
     app.post("/addrecipe", async (req, res) => {
       const data = req.body;
       const result = await recipecollection.insertOne(data);
+      res.send(result);
+    });
+    // for add parcel
+    app.post("/addparcel", async (req, res) => {
+      const newparcel = req.body;
+      const result = await parcelcollection.insertOne(newparcel);
       res.send(result);
     });
 

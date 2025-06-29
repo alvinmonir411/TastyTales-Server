@@ -6,7 +6,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 app.use(cors());
 app.use(express.json());
-// 
+//
 const stripe = require("stripe")(`${process.env.STRIPE_SECRET}`);
 
 // MongoDB setup
@@ -24,8 +24,8 @@ async function run() {
   try {
     const recipecollection = client.db("tastytales").collection("Allrecipe");
     const parcelcollection = client.db("tastytales").collection("parcel");
-    const orderscollection = client.db("tastytales").collection('orders')
-  
+    const orderscollection = client.db("tastytales").collection("orders");
+    const Riderscollection = client.db("tastytales").collection("Riders");
 
     app.get("/allrecipe", async (req, res) => {
       const size = parseInt(req.query.size) || 10;
@@ -40,13 +40,11 @@ async function run() {
       res.json({ recipes, total });
     });
 
-
-
-    // this is for admin pannel delele data 
-    app.delete('/parcle/:id', async (req, res) => {
+    // this is for admin pannel delele data
+    app.delete("/parcle/:id", async (req, res) => {
       const id = req.params.id;
       const result = await parcelcollection.deleteOne({
-        _id: new ObjectId(id)
+        _id: new ObjectId(id),
       });
       res.send(result);
     });
@@ -85,7 +83,7 @@ async function run() {
       });
       res.send(result);
     });
-   
+
     app.get("/uniqueauthors", async (req, res) => {
       const result = await recipecollection.distinct("author");
       res.send(result);
@@ -137,19 +135,39 @@ async function run() {
         res.status(500).send({ error: err.message });
       }
     });
-    
-    app.post("/orders", async (req, res) => {
-    
-      const neworders = req.body;
-      const result = await orderscollection.insertOne(neworders)
-res.send(result);
 
+    app.post("/orders", async (req, res) => {
+      const neworders = req.body;
+      const result = await orderscollection.insertOne(neworders);
+      res.send(result);
+
+      // for rider
+      // Make sure Riderscollection is connected here properly
     });
-    // get my order
+    app.post("/Riders", async (req, res) => {
+      try {
+        const newrider = req.body;
+        console.log(newrider);
+        const result = await Riderscollection.insertOne(newrider);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: "Failed to add rider" });
+      }
+    });
+
+    app.get("/pendingRiders", async (req, res) => {
+      const query = {
+        status: "Pending",
+      };
+      const result = await Riderscollection.find(query).toArray();
+      res.send(result);
+    });
+
     app.get("/orders", async (req, res) => {
       const { email } = req.query;
       const query = { "buyerInfo.email": email };
-      const result = await orderscollection.find( query ).toArray();
+      const result = await orderscollection.find(query).toArray();
       res.send(result);
     });
 
@@ -162,7 +180,7 @@ res.send(result);
 }
 run();
 
-const PORT = process.env.PORT || 5001;
+const PORT = 5001;
 app.get("/", (req, res) => {
   res.send("Hello World! this is tastytales backend");
 });
